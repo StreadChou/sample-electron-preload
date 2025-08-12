@@ -18,10 +18,11 @@ export class FileHandler {
 
 ````typescript
 // Loader.ts
+import {getSingletonInstance} from "@stread/sample-electron-preload/main";
 import {FileHandler} from "example/FileHandler";
 
 export const LoaderHandler = [
-    FileHandler
+    getSingletonInstance(FileHandler),
 ]
 ````
 

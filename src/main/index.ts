@@ -2,13 +2,10 @@ import {ipcMain, type IpcMainInvokeEvent} from "electron";
 
 type HandlerFn = (event: IpcMainInvokeEvent, data: any) => Promise<any> | any;
 
-export const InjectRequest: Record<string, HandlerFn> = {};
-export const InjectSend: Record<string, HandlerFn> = {};
-
 // 单例实例缓存：类构造函数 -> 实例
 const singletonInstances = new Map<Function, any>();
 
-function getSingletonInstance(target: any) {
+export function getSingletonInstance(target: any) {
     const ctor = target.constructor;
     if (!singletonInstances.has(ctor)) {
         singletonInstances.set(ctor, new ctor());
@@ -16,28 +13,37 @@ function getSingletonInstance(target: any) {
     return singletonInstances.get(ctor);
 }
 
-function createMethodDecorator(storage: Record<string, HandlerFn>) {
-    return () => (target: any, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) => {
+export const InjectRequest: Record<string, HandlerFn> = {};
+
+export function Request(config: RequestSendConfig): MethodDecorator {
+    return function (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) {
         const originalMethod = descriptor.value;
-        if (typeof originalMethod !== 'function') {
-            throw new Error('Decorator can only be used on methods');
-        }
-
-        const className = target.constructor.name;
-        const route = `${className}.${propertyKey}`;
-
-        if (storage[route]) {
-            throw new Error(`Duplicate route detected: ${route}`);
-        }
-
+        if (typeof originalMethod !== 'function') throw new Error('Decorator can only be used on methods');
+        if (InjectRequest[config.route]) throw new Error(`Duplicate route detected: ${config.route}`);
         // 绑定到单例实例，确保 this 指向唯一实例
         const instance = getSingletonInstance(target);
-        storage[route] = originalMethod.bind(instance);
+        InjectRequest[config.route] = originalMethod.bind(instance);
+        console.log(`Request Registered route: ${config.route}`)
     };
 }
 
-export const Request = createMethodDecorator(InjectRequest);
-export const Send = createMethodDecorator(InjectSend);
+export const InjectSend: Record<string, HandlerFn> = {};
+
+export function Send(config: RequestSendConfig): MethodDecorator {
+    return function (target: Object, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<any>) {
+        const originalMethod = descriptor.value;
+        if (typeof originalMethod !== 'function') throw new Error('Decorator can only be used on methods');
+        if (InjectSend[config.route]) throw new Error(`Duplicate route detected: ${config.route}`);
+        // 绑定到单例实例，确保 this 指向唯一实例
+        const instance = getSingletonInstance(target);
+        InjectSend[config.route] = originalMethod.bind(instance);
+        console.log(`Request Registered route: ${config.route}`)
+    };
+}
+
+export interface RequestSendConfig {
+    route: string;
+}
 
 export function StartListen() {
     ipcMain.handle("Electron:Request", async (event, {route, data}) => {
