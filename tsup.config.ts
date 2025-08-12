@@ -2,6 +2,15 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig([
     {
+        entry: ['src/index.ts'], // 每个入口点都可以自定义
+        outDir: 'dist',
+        format: ['cjs', 'esm'],
+        dts: true,
+        splitting: false,
+        sourcemap: true,
+        clean: true,
+    },
+    {
         entry: ['src/main/index.ts'], // 每个入口点都可以自定义
         outDir: 'dist/main',
         format: ['cjs', 'esm'],
